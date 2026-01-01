@@ -1,24 +1,39 @@
 let t = 0;
+let isMobile = false;
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
+    
+    pixelDensity(1);
+
+    if (min(width, height) < 600) {
+        isMobile = true;
+    }
+
     background(0);
 }
 
 function draw() {
     let speed = dist(mouseX, mouseY, pmouseX, pmouseY);
+    speed = constrain(speed, 0, 100);
+
     noStroke();
-    fill(0, map(speed, 0, 100, 50, 5)); 
+    let fadeAlpha = map(speed, 0, 100, 50, 5);
+    fill(0, isMobile ? fadeAlpha + 10 : fadeAlpha); 
     rect(0, 0, width, height);
-    let intensity = map(mouseX, 0, width, 2, 150);
+    
+    let maxRects = isMobile ? 50 : 150;
+    let intensity = map(mouseX, 0, width, 2, maxRects);
+    
     let stretch = map(mouseY, 0, height, 2, 100);
+    
     blendMode(ADD); 
+    
     for(let i=0; i < intensity; i++) {
         let x = random(width);
         if (random(1) > 0.5) x = lerp(x, mouseX, 0.5);
         
         let y = random(height);
-        
         let w = random(10, width/4);
         let h = random(1, stretch); 
         
@@ -49,14 +64,19 @@ function draw() {
     stroke(0, 255, 0, 50); 
     strokeWeight(1);
     
-    for(let i=0; i<20; i++) {
+    let lineCount = isMobile ? 10 : 20;
+    for(let i=0; i < lineCount; i++) {
         let y = random(height);
         let offset = mouseIsPressed ? random(-50, 50) : noise(t + y)*10;
         line(0, y + offset, width, y);
     }
     
     if (mouseIsPressed) {
-        filter(INVERT);
+        blendMode(DIFFERENCE);
+        fill(255);
+        noStroke();
+        rect(0, 0, width, height);
+        blendMode(BLEND); // Reset
     }
 
     t += 0.05;
@@ -64,5 +84,10 @@ function draw() {
 
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
+    isMobile = min(width, height) < 600;
     background(0);
+}
+
+function touchMoved() {
+    return false;
 }
