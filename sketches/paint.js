@@ -1,18 +1,32 @@
-
 let brushes = [];
 let paperGrain;
+let isMobile = false;
+
 function setup() {
     createCanvas(windowWidth, windowHeight);
+    
+    pixelDensity(1);
+
+    if (min(width, height) < 600) {
+        isMobile = true;
+    }
+
     background(245, 240, 235); 
     
     paperGrain = createGraphics(width, height);
     paperGrain.noStroke();
-    for(let i=0; i<60000; i++) {
+    
+    let grainCount = isMobile ? 25000 : 60000;
+    
+    for(let i=0; i<grainCount; i++) {
         paperGrain.fill(0, random(5, 12)); 
         paperGrain.rect(random(width), random(height), 1, 1);
     }
     image(paperGrain, 0, 0);
-    for (let i = 0; i < 30; i++) {
+
+    let initBrushes = isMobile ? 15 : 30;
+    
+    for (let i = 0; i < initBrushes; i++) {
         brushes.push(new HybridBrush());
     }
 }
@@ -30,36 +44,60 @@ function draw() {
 }
 
 function mousePressed() {
-    for(let i=0; i<5; i++) {
+    let count = isMobile ? 2 : 5;
+    for(let i=0; i<count; i++) {
         brushes.push(new HybridBrush(mouseX, mouseY));
     }
 }
 
+function touchMoved() {
+    return false;
+}
+
 function keyPressed() {
     if (key === ' ') {
-        background(245, 240, 235);
-        image(paperGrain, 0, 0);
-        brushes = [];
-        for (let i = 0; i < 30; i++) {
-            brushes.push(new HybridBrush());
-        }
+        resetCanvas();
     }
 }
 
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
+    isMobile = min(width, height) < 600;
+    resetCanvas();
+}
+
+function resetCanvas() {
     background(245, 240, 235);
+    if (paperGrain.width !== width || paperGrain.height !== height) {
+        paperGrain = createGraphics(width, height);
+        paperGrain.noStroke();
+        let grainCount = isMobile ? 25000 : 60000;
+        for(let i=0; i<grainCount; i++) {
+            paperGrain.fill(0, random(5, 12)); 
+            paperGrain.rect(random(width), random(height), 1, 1);
+        }
+    }
     image(paperGrain, 0, 0);
+    brushes = [];
+    let initBrushes = isMobile ? 15 : 30;
+    for (let i = 0; i < initBrushes; i++) {
+        brushes.push(new HybridBrush());
+    }
 }
 
 class HybridBrush {
     constructor(x, y) {
         this.pos = createVector(x || random(width), y || random(height));
         this.prevPos = this.pos.copy();
+        
         this.vel = p5.Vector.random2D().mult(5);
         this.life = random(100, 400);
         this.maxLife = this.life;
-        this.baseWidth = random(20, 70);
+        
+        let wMin = isMobile ? 15 : 20;
+        let wMax = isMobile ? 50 : 70;
+        this.baseWidth = random(wMin, wMax);
+        
         let colors = [
             color(180, 40, 40),   
             color(20, 60, 140),   
@@ -70,7 +108,10 @@ class HybridBrush {
         ];
         this.mainColor = random(colors);
         this.bristles = [];
-        let numBristles = int(this.baseWidth); 
+        
+        let density = isMobile ? 0.6 : 1.0;
+        let numBristles = int(this.baseWidth * density); 
+        
         for(let i=0; i<numBristles; i++) {
             this.bristles.push({
                 offset: random(-this.baseWidth/2, this.baseWidth/2),
@@ -79,7 +120,7 @@ class HybridBrush {
         }
         this.blobOffset = random(1000);
     }
-
+    
     update() {
         this.prevPos = this.pos.copy();
         let n = noise(this.pos.x * 0.002, this.pos.y * 0.002, frameCount * 0.002);
@@ -93,18 +134,22 @@ class HybridBrush {
         this.life -= 1;
         this.currentWidth = this.baseWidth * (0.5 + 0.5 * sin(frameCount * 0.1));
     }
-
+    
     show() {
         let perp = p5.Vector.fromAngle(this.vel.heading() + HALF_PI);
         let r = red(this.mainColor);
         let g = green(this.mainColor);
         let b = blue(this.mainColor);
+        
         noStroke();
         fill(r, g, b, 8); 
         push();
         translate(this.pos.x, this.pos.y);
         beginShape();
-        for (let a = 0; a < TWO_PI; a += 0.5) {
+        
+        let step = isMobile ? 1.0 : 0.5;
+        
+        for (let a = 0; a < TWO_PI; a += step) {
             let waterRadius = (this.currentWidth * 1.5) + map(noise(cos(a), sin(a), this.blobOffset), 0, 1, -20, 20);
             vertex(waterRadius * cos(a), waterRadius * sin(a));
         }
@@ -113,7 +158,9 @@ class HybridBrush {
         this.blobOffset += 0.1;
         noFill();
         stroke(r, g, b, 50); 
+    
         strokeWeight(1);
+        
         for (let br of this.bristles) {
             let scale = this.currentWidth / this.baseWidth;
             let currentOffset = br.offset * scale;
@@ -125,8 +172,7 @@ class HybridBrush {
             
             line(p1.x, p1.y, p2.x, p2.y);
         }
-    }
-
+    }   
     isDead() {
         if (this.pos.x < -50 || this.pos.x > width+50 || this.pos.y < -50 || this.pos.y > height+50) return true;
         return this.life < 0;

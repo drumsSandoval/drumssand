@@ -1,11 +1,24 @@
 let rays = [];
 let numRays = 70;
 let t = 0;
+let isMobile = false;
 
 function setup() {
     createCanvas(windowWidth, windowHeight, P2D);
+    
+    pixelDensity(1); 
+
+    if (min(width, height) < 600) {
+        isMobile = true;
+        numRays = 30; 
+    } else {
+        numRays = 70; 
+    }
+
     colorMode(HSB, 360, 100, 150, 100);
     background(0);
+    
+    rays = [];
     for (let i = 0; i < numRays; i++) {
         rays.push(new Ray());
     }
@@ -13,30 +26,55 @@ function setup() {
 
 function draw() {
     let mouseSpeed = dist(mouseX, mouseY, pmouseX, pmouseY);
+    mouseSpeed = constrain(mouseSpeed, 0, 100); 
+
     let fadeSpeed = map(mouseSpeed, 0, 50, 5, 20, true);
+    
     background(0, 0, 0, fadeSpeed);
+    
     blendMode(ADD);
+    
     push();
     translate(width / 2, height / 2);
     rotate(t * 0.02);
     noFill();
     strokeWeight(1 + sin(t*2));
     stroke(255, 10 + sin(t*3)*5); 
+    let scaleTri = isMobile ? 0.7 : 1.0;
+    scale(scaleTri);
     triangle(-120, 60, 120, 60, 0, -150);
     pop();
+
     let mouse = createVector(mouseX, mouseY);
     let chaosFactor = map(mouseSpeed, 0, 100, 0, 1, true);
+
     for (let ray of rays) {
         ray.update(mouse, t, chaosFactor);
         ray.display();
     }
+    
     t += 0.005 + (chaosFactor * 0.03); 
 }
 
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
+    isMobile = min(width, height) < 600;
+    let targetRays = isMobile ? 30 : 70;
+    
+    if (rays.length > targetRays) {
+        rays.splice(targetRays); 
+    } else {
+        while (rays.length < targetRays) {
+            rays.push(new Ray()); 
+        }
+    }
     background(0);
 }
+
+function touchMoved() {
+    return false;
+}
+
 class Ray {
     constructor() {
         this.reset();
@@ -56,8 +94,13 @@ class Ray {
         this.hue = 0;
         this.sat = 0;
         this.brightness = 50;
-        // Estelas más largas
-        this.maxHistory = random(50, 80);
+        
+        if (isMobile) {
+            this.maxHistory = random(30, 50); 
+        } else {
+            this.maxHistory = random(50, 80);
+        }
+        
         this.thickness = random(1, 2.5);
         this.history = [];
     }
@@ -67,29 +110,38 @@ class Ray {
         if (this.history.length > this.maxHistory) {
             this.history.shift();
         }
+
         let d = p5.Vector.dist(this.pos, mouseVec);
         let interactionZone = min(width, height) * 0.35; 
+        
         if (d < interactionZone) {
             let angleToMouse = p5.Vector.sub(mouseVec, this.pos).heading();
             let dispersion = map(d, 0, interactionZone, 1, 0);
             let noiseScale = 0.01 + (chaos * 0.02);
             let noiseVal = noise(this.pos.x * noiseScale, this.pos.y * noiseScale, time);
+            
             this.hue = map(angleToMouse + noiseVal * (1+chaos*2), -PI, PI, 0, 360);
             this.sat = 100; 
             this.brightness = map(d, 0, interactionZone, 150, 50) + (chaos * 100);
+            
             let forceMultiplier = 3 + (chaos * 15);
             let bendAngle = angleToMouse + PI/2 * (noiseVal > 0.5 ? 1 : -1);
             if(chaos > 0.1) bendAngle += random(-chaos, chaos);
+            
             let bendForce = p5.Vector.fromAngle(bendAngle);
             bendForce.setMag(dispersion * forceMultiplier);
             this.vel.add(bendForce);
             this.vel.limit(6 + chaos * 10); 
         } else {
+            // Retorno a la calma
             this.vel.lerp(this.baseVel, 0.02);
             this.sat = lerp(this.sat, 0, 0.05);
             this.brightness = lerp(this.brightness, 40, 0.05);
         }
+
         this.pos.add(this.vel);
+        
+        // Reset si sale de pantalla
         if (this.pos.x > width + 200 || this.pos.x < -200 || 
             this.pos.y > height + 200 || this.pos.y < -200) {
             this.reset();
@@ -101,10 +153,16 @@ class Ray {
         strokeWeight(this.thickness * (1 + this.brightness/150));
         
         beginShape();
-        for (let i = 0; i < this.history.length; i++) {
+        
+        let step = isMobile ? 2 : 1;
+        
+        for (let i = 0; i < this.history.length; i += step) {
             let pos = this.history[i];
+            
+            // Calculamos alpha y color
             let alpha = map(i, 0, this.history.length, 0, this.brightness);
             let hueShift = (this.hue + i*0.5) % 360;
+            
             stroke(hueShift, this.sat, this.brightness, alpha);
             vertex(pos.x, pos.y);
         }
