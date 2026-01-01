@@ -2,13 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Oscar Sandoval | Creative Developer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
+        * {
+            -webkit-user-select: none; 
+            -moz-user-select: none;    
+            -ms-user-select: none;     
+            user-select: none;             
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
         body {
             margin: 0;
             padding: 0;
@@ -16,6 +24,8 @@
             background-color: #050505; 
             color: #ffffff;
             font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+            touch-action: none;
         }
         canvas {
             display: block;
@@ -49,6 +59,7 @@
             object-fit: cover;
             border: 2px solid rgba(255, 255, 255, 0.1); 
             transition: transform 0.3s ease;
+            pointer-events: none;
         }
         .profile-img:hover {
             transform: scale(1.1) rotate(5deg);
