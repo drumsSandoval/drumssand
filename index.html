@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Oscar Sandoval | Creative Developer</title>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -123,13 +125,34 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .quiet-links {
+            display: flex;
+            gap: 1.2rem;
+            margin-top: 0.75rem;
+            padding: 0 2px;
+        }
+        .quiet-links a {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 300;
+            text-decoration: none;
+            letter-spacing: 1px;
+            text-transform: lowercase;
+            color: rgba(255, 255, 255, 0.28);
+            transition: color 0.3s ease;
+        }
+        .quiet-links a:hover,
+        .quiet-links a:focus-visible {
+            color: rgba(255, 255, 255, 0.85);
+            outline: none;
+        }
         @media (max-width: 600px) {
             .profile-card {
-                margin-left: 8vw; 
-                margin-bottom: 10vh; 
+                margin-left: 8vw;
+                margin-bottom: 10vh;
             }
             .name {
-                font-size: 2rem; 
+                font-size: 2rem;
             }
         }
     </style>
@@ -150,11 +173,17 @@
                 <a href="https://www.instagram.com/drumssand/" class="social-link" title="Instagram"><i class="ri-instagram-line"></i></a>
                 <a href="mailto:drumssand@gmail.com" class="social-link" title="Email"><i class="ri-mail-send-line"></i></a>
             </div>
+            <nav class="quiet-links">
+                <a href="/cv">cv</a>
+                <a href="/projects">projects</a>
+                <a href="/blog">blog</a>
+            </nav>
 
         </div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" defer></script>
     <script>
+        // Profile image — runs immediately, no p5 dependency
         const profileImages = [
             'assets/profile.jpeg',
             'assets/profile2.jpg'
@@ -162,19 +191,33 @@
         const randomImage = profileImages[Math.floor(Math.random() * profileImages.length)];
         const imgElement = document.getElementById('profile-pic');
         imgElement.onerror = function() {
-            this.style.display = 'none'; 
+            this.style.display = 'none';
         };
         imgElement.src = randomImage;
+
+        // Inject sketch on window load (p5 deferred script has executed by then).
+        // p5's auto-init already ran without finding setup(), so start it
+        // manually once the sketch script finishes loading.
         const sketches = [
             'sketches/draw_flow.js',
             'sketches/adhd_wave.js',
             'sketches/hard_noise.js',
             'sketches/paint.js',
+            'sketches/the_wall.js',
+            'sketches/garden.js',
+            'sketches/cloth.js',
         ];
         const randomSketch = sketches[Math.floor(Math.random() * sketches.length)];
-        const script = document.createElement('script');
-        script.src = randomSketch;
-        document.body.appendChild(script);
+        window.addEventListener('load', function() {
+            const script = document.createElement('script');
+            script.src = randomSketch;
+            script.onload = function() {
+                if (typeof setup === 'function' && !window._p5Instance) {
+                    window._p5Instance = new p5();
+                }
+            };
+            document.body.appendChild(script);
+        });
     </script>
 </body>
 </html>

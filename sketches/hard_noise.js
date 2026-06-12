@@ -52,11 +52,11 @@ function draw() {
     
     blendMode(BLEND);
 
-    if (speed > 5) {
+    if (speed > 5 && frameCount % 4 === 0) {
         let sliceH = random(5, 50);
         let sliceY = random(height);
-        let shift = random(-speed, speed) * 2; 
-        
+        let shift = random(-speed, speed) * 2;
+
         let img = get(0, sliceY, width, sliceH);
         image(img, shift, sliceY);
     }
