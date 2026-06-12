@@ -6,8 +6,17 @@ let plants = [];
 let bloomedFlowers = []; // live flowers rendered on main canvas each frame
 let spores = [];
 let shockwaves = []; // expanding rings from click/tap
+let petalFall = []; // dead petals falling (naturaleza muerta)
 let t = 0;
 let isMobile = false;
+
+// Life/death cycle: the paradise blooms, withers to bone, and is reborn
+const LIFE_CYCLE = 1500; // frames per full cycle
+let cycleFrame = 0;
+let prevCyclePos = 0;
+let gardenDying = false;
+let deathT = 0; // 0..1 progress through the dying phase
+let rebirthFlash = 0;
 
 const MAX_PLANTS_DESKTOP = 14;
 const MAX_PLANTS_MOBILE  = 7;
@@ -86,18 +95,43 @@ function makeSpore(x, y) {
 // DRAW
 
 function draw() {
+    // --- LIFE/DEATH CYCLE ---
+    cycleFrame++;
+    let cyclePos = (cycleFrame % LIFE_CYCLE) / LIFE_CYCLE;
+    gardenDying = cyclePos > 0.76;
+    deathT = gardenDying ? (cyclePos - 0.76) / 0.24 : 0;
+
+    // Rebirth: the moment the cycle wraps, life floods back
+    if (cyclePos < prevCyclePos) {
+        rebirthFlash = 25;
+        let reborn = isMobile ? 2 : 3;
+        for (let i = 0; i < reborn; i++) {
+            plants.push(new Plant(random(width * 0.1, width * 0.9), random(height * 0.4, height * 0.95)));
+        }
+        for (let i = 0; i < 2 && bloomedFlowers.length > 0; i++) {
+            let fl = random(bloomedFlowers);
+            shockwaves.push({ x: fl.x, y: fl.y, r: 4, life: 30, maxLife: 30, hue: random(360) });
+        }
+    }
+    prevCyclePos = cyclePos;
+
     // --- MELT FEEDBACK on the offscreen buffer ---
     // Self-zoom: draws itself slightly expanded (old growth drifts outward)
     garden.image(garden, -width * 0.0007, -height * 0.0007, width * 1.0014, height * 1.0014);
-    // Background hue cycles: very dark, hue = (t*4)%360, sat 60, bri 6
-    let bgHue = (t * 4) % 360;
     garden.noStroke();
-    garden.fill(bgHue, 60, 6, 1.0); // very slow dissolve
+    if (gardenDying) {
+        // Death drains the buffer toward bone and dust, faster than life fades
+        garden.fill(36, 18, 9, 2.2 + deathT * 1.5);
+    } else {
+        // Background hue cycles: very dark, slow dissolve
+        let bgHue = (t * 4) % 360;
+        garden.fill(bgHue, 60, 6, 1.0);
+    }
     garden.rect(0, 0, width, height);
 
     // --- PLANT GROWTH into buffer ---
     // Auto-seed faster than original
-    if (frameCount % 40 === 0 && plants.length < maxPlants) {
+    if (!gardenDying && frameCount % 40 === 0 && plants.length < maxPlants) {
         let sx = random(width * 0.05, width * 0.95);
         let sy = random(height * 0.35, height * 0.98);
         plants.push(new Plant(sx, sy));
@@ -121,34 +155,91 @@ function draw() {
     // --- LIVING BLOOMS on main canvas ---
     blendMode(ADD);
     noStroke();
+    colorMode(HSB, 360, 100, 100, 100);
     for (let fl of bloomedFlowers) {
-        fl.phase += 0.04 + fl.phaseSpeed;
-        fl.hue = (fl.hue + 0.3) % 360;
-        fl.shimmerAngle += 0.025;
+        if (gardenDying) {
+            // Withering: erratic flicker, drained color, drooping petals
+            fl.shimmerAngle += 0.004;
+            let spasm = noise(fl.seed, t * 9);
+            let haloSize = (10 + 20 * (0.5 + 0.5 * sin(fl.phase))) * (1 - deathT * 0.45) * (0.7 + spasm * 0.6);
+            let boneSat = 80 * (1 - deathT * 0.85);
+            let boneBri = 100 - deathT * 50;
+            let flickerA = (0.3 + spasm * 0.7);
 
-        // Pulsing halo: size oscillates 10..30
-        let haloSize = 10 + 20 * (0.5 + 0.5 * sin(fl.phase));
-        colorMode(HSB, 360, 100, 100, 100);
-        fill(fl.hue, 80, 100, 12);
-        ellipse(fl.x, fl.y, haloSize * 2.2, haloSize * 2.2);
-        fill(fl.hue, 60, 100, 6);
-        ellipse(fl.x, fl.y, haloSize * 3.2, haloSize * 3.2);
+            fill(fl.hue, boneSat, boneBri, 10 * flickerA);
+            ellipse(fl.x, fl.y, haloSize * 2.2, haloSize * 2.2);
 
-        // Rotating shimmer petals (4-6 thin arcs/ellipses)
-        let petalCount = fl.petalCount;
-        for (let i = 0; i < petalCount; i++) {
-            let ang = fl.shimmerAngle + (i / petalCount) * TWO_PI;
-            let pr = haloSize * 0.7;
-            let ph = (fl.hue + i * (360 / petalCount)) % 360;
-            fill(ph, 90, 100, 25);
-            push();
-            translate(fl.x + cos(ang) * pr, fl.y + sin(ang) * pr);
-            rotate(ang + HALF_PI);
-            ellipse(0, 0, haloSize * 0.35, haloSize * 0.9);
-            pop();
+            let droop = deathT * haloSize * 0.8;
+            for (let i = 0; i < fl.petalCount; i++) {
+                let ang = fl.shimmerAngle + (i / fl.petalCount) * TWO_PI;
+                let pr = haloSize * 0.7;
+                fill((fl.hue + i * 8) % 360, boneSat, boneBri, 16 * flickerA);
+                push();
+                translate(fl.x + cos(ang) * pr, fl.y + sin(ang) * pr + droop);
+                rotate(ang * (1 - deathT * 0.7) + HALF_PI);
+                ellipse(0, 0, haloSize * 0.3, haloSize * (0.9 - deathT * 0.4));
+                pop();
+            }
+
+            // Petals detach and fall
+            if (random(1) < 0.04 * deathT && petalFall.length < 120) {
+                petalFall.push({
+                    x: fl.x + random(-8, 8), y: fl.y,
+                    vx: random(-0.4, 0.4), vy: random(0.4, 1.2),
+                    hue: fl.hue, life: 100, maxLife: 100,
+                    seed: random(1000)
+                });
+            }
+        } else {
+            fl.phase += 0.04 + fl.phaseSpeed;
+            fl.hue = (fl.hue + 0.3) % 360;
+            fl.shimmerAngle += 0.025;
+
+            // Occasional spasm — alive does not mean calm
+            let spasm = noise(fl.seed, t * 2) > 0.78;
+            let jx = spasm ? random(-3, 3) : 0;
+            let jy = spasm ? random(-3, 3) : 0;
+
+            // Pulsing halo: size oscillates 10..30
+            let haloSize = (10 + 20 * (0.5 + 0.5 * sin(fl.phase))) * (spasm ? 1.3 : 1);
+            fill(fl.hue, 80, 100, spasm ? 20 : 12);
+            ellipse(fl.x + jx, fl.y + jy, haloSize * 2.2, haloSize * 2.2);
+            fill(fl.hue, 60, 100, 6);
+            ellipse(fl.x + jx, fl.y + jy, haloSize * 3.2, haloSize * 3.2);
+
+            // Rotating shimmer petals
+            for (let i = 0; i < fl.petalCount; i++) {
+                let ang = fl.shimmerAngle + (i / fl.petalCount) * TWO_PI;
+                let pr = haloSize * 0.7;
+                let ph = (fl.hue + i * (360 / fl.petalCount)) % 360;
+                fill(ph, 90, 100, 25);
+                push();
+                translate(fl.x + jx + cos(ang) * pr, fl.y + jy + sin(ang) * pr);
+                rotate(ang + HALF_PI);
+                ellipse(0, 0, haloSize * 0.35, haloSize * 0.9);
+                pop();
+            }
         }
     }
     blendMode(BLEND);
+
+    // --- FALLING DEAD PETALS ---
+    noStroke();
+    for (let i = petalFall.length - 1; i >= 0; i--) {
+        let p = petalFall[i];
+        p.x += p.vx + (noise(p.seed, t * 2) - 0.5) * 1.2;
+        p.y += p.vy;
+        p.vy += 0.02;
+        p.life--;
+        let fade = p.life / p.maxLife;
+        fill(p.hue, 25 * fade, 60, 50 * fade);
+        push();
+        translate(p.x, p.y);
+        rotate(noise(p.seed, t * 3) * TWO_PI);
+        ellipse(0, 0, 6 * fade + 2, 3 * fade + 1);
+        pop();
+        if (p.life <= 0 || p.y > height + 10) petalFall.splice(i, 1);
+    }
 
     // --- FLOATING SPORES ---
     blendMode(ADD);
@@ -157,15 +248,18 @@ function draw() {
     for (let i = spores.length - 1; i >= 0; i--) {
         let s = spores[i];
         s.x += s.vx + (noise(s.seed, t * 0.4) - 0.5) * 0.6;
-        s.y += s.vy;
+        // While the garden dies, spores stop floating and sink like ash
+        s.y += gardenDying ? abs(s.vy) * (0.5 + deathT) : s.vy;
         // Wrap at edges
         if (s.y < -10) { spores[i] = makeSpore(random(width), height + 5); continue; }
+        if (s.y > height + 10) { spores[i] = makeSpore(random(width), -5); continue; }
         if (s.x < -10) s.x = width + 5;
         if (s.x > width + 10) s.x = -5;
-        fill(s.hue, 80, 100, s.alpha * 0.8);
+        let dim = gardenDying ? (1 - deathT * 0.6) : 1;
+        fill(s.hue, gardenDying ? 20 : 80, 100, s.alpha * 0.8 * dim);
         ellipse(s.x, s.y, s.size, s.size);
         // Soft glow
-        fill(s.hue, 60, 100, s.alpha * 0.3);
+        fill(s.hue, gardenDying ? 15 : 60, 100, s.alpha * 0.3 * dim);
         ellipse(s.x, s.y, s.size * 2.5, s.size * 2.5);
     }
     blendMode(BLEND);
@@ -184,6 +278,16 @@ function draw() {
         if (sw.life <= 0) shockwaves.splice(i, 1);
     }
     noStroke();
+
+    // --- REBIRTH FLASH: color floods back into the world ---
+    if (rebirthFlash > 0) {
+        blendMode(ADD);
+        noStroke();
+        fill((t * 60) % 360, 80, 60, rebirthFlash * 0.5);
+        rect(0, 0, width, height);
+        blendMode(BLEND);
+        rebirthFlash--;
+    }
 
     colorMode(HSB, 360, 100, 100, 100);
     t += 0.005;
@@ -295,7 +399,9 @@ class Stem {
     grow(g, hueSeed) {
         if (!this.alive) return;
 
-        let drift = (noise(this.noiseSeed + t * 0.5 + this.segCount * 0.05) - 0.5) * 0.5;
+        // Dying gardens grow twisted
+        let driftAmp = gardenDying ? 1.4 : 0.5;
+        let drift = (noise(this.noiseSeed + t * 0.5 + this.segCount * 0.05) - 0.5) * driftAmp;
         this.heading += drift;
 
         // Burst stems go radially; normal stems go upward
@@ -310,6 +416,12 @@ class Stem {
         let stemH = (this.hueSeed + this.depth * 40 + this.length * 0.3) % 360;
         let stemS = map(this.depth, 0, 2, 85, 65);
         let stemB = map(this.length, 0, this.maxLength, 90, 55);
+        if (gardenDying) {
+            // Blackened bone growth
+            stemH = 36;
+            stemS = 14;
+            stemB = 28 + noise(this.noiseSeed, t * 4) * 18;
+        }
 
         // Wide glow stroke + thin bright core
         let glowW = map(this.depth, 0, 2, 4.0, 2.0);

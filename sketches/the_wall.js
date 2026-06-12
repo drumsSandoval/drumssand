@@ -16,7 +16,8 @@ let shards = [];
 let shakeFrames = 0;
 let shakeDecay = 0;
 let flashFrames = 0;
-let tripWorld = 0; // 0=pain, 1=timefall, 2=acid
+let tripDepth = 1; // descent layer: each hit while tripping goes deeper
+const MAX_DEPTH = 4;
 let tripTimer = 0;
 const TRIP_DURATION = 600; // ~10s at 60fps
 
@@ -28,13 +29,7 @@ const REFORM_DURATION = 120; // ~2s
 let hbPhase = 0;
 const HB_BPM = 55;
 
-// --- acid world feedback ---
-let acidHue = 0;
-
-// --- timefall ---
-let filmScratch = [];
-
-// --- pain smoke blobs ---
+// --- smoke blobs (trip occlusion) ---
 let smokeBlobs = [];
 
 // ---
@@ -132,6 +127,9 @@ function paintWallTexture() {
         }
     }
 
+    // Graffiti layer — painted before the speckle pass so dust weathers it
+    paintGraffiti();
+
     // Speckle noise
     let speckleCount = isMobile ? 800 : 2500;
     wallBuf.strokeWeight(1);
@@ -142,6 +140,101 @@ function paintWallTexture() {
         let al = random(20, 90);
         wallBuf.stroke(bri * 0.9, bri * 0.85, bri * 0.75, al);
         wallBuf.point(sx, sy);
+    }
+
+    wallBuf.noStroke();
+}
+
+// ---------------------------------------------------------------------------
+// GRAFFITI — spray tag + marker scribbles, muted streetwear palette
+
+const GRAFFITI_PALETTE = [
+    [228, 222, 210],  // bone white
+    [196, 110, 100],  // dusty coral
+    [96, 138, 128],   // faded teal
+    [186, 148, 82],   // worn ochre
+];
+
+function paintGraffiti() {
+    // --- Main tag: the handle, spray-painted with an italic shear ---
+    let tagCol = GRAFFITI_PALETTE[0];
+    let tSize = min(width, height) * (isMobile ? 0.13 : 0.12);
+    // Keep the whole tag on the wall (estimate width, clamp right edge)
+    let tagW = tSize * 5.4;
+    let tx = constrain(width * (isMobile ? 0.18 : 0.45), 16, max(16, width - tagW - 24));
+    let ty = height * random(0.2, 0.38);
+
+    wallBuf.push();
+    wallBuf.translate(tx, ty);
+    wallBuf.rotate(random(-0.06, -0.02));
+    wallBuf.drawingContext.transform(1, 0, -0.28, 1, 0, 0); // italic lean
+    wallBuf.textSize(tSize);
+    wallBuf.textStyle(BOLD);
+    wallBuf.textAlign(LEFT, BASELINE);
+    wallBuf.noStroke();
+    // Spray halo: jittered low-alpha passes around the letters
+    for (let i = 0; i < 8; i++) {
+        wallBuf.fill(tagCol[0], tagCol[1], tagCol[2], 13);
+        wallBuf.text('drumssand', random(-4, 4), random(-4, 4));
+    }
+    // Drop shadow gives it piece depth
+    wallBuf.fill(18, 14, 12, 140);
+    wallBuf.text('drumssand', 4, 5);
+    // Main coat, slightly translucent so the wall grime shows through
+    wallBuf.fill(tagCol[0], tagCol[1], tagCol[2], 170);
+    wallBuf.text('drumssand', 0, 0);
+    wallBuf.pop();
+
+    // Paint drips running from the tag's baseline
+    let dripN = isMobile ? 3 : 5;
+    for (let i = 0; i < dripN; i++) {
+        let dx = tx + random(0, tagW * 0.8);
+        let dy = ty + random(-tSize * 0.3, 6);
+        let dlen = random(20, 70);
+        for (let seg = 0; seg < dlen; seg += 3) {
+            let a = map(seg, 0, dlen, 120, 10);
+            wallBuf.stroke(tagCol[0], tagCol[1], tagCol[2], a);
+            wallBuf.strokeWeight(random(1, 2.2));
+            wallBuf.line(dx, dy + seg, dx + random(-0.6, 0.6), dy + seg + 3);
+        }
+    }
+
+    // --- Marker scribbles: quick gestural throw-ups around the wall ---
+    let scribbleN = isMobile ? 3 : 5;
+    for (let s = 0; s < scribbleN; s++) {
+        let col = GRAFFITI_PALETTE[1 + (s % (GRAFFITI_PALETTE.length - 1))];
+        let sx = random(width * 0.05, width * 0.85);
+        let sy = random(height * 0.1, height * 0.9);
+        let span = random(50, 140);
+        let seed = random(1000);
+        wallBuf.noFill();
+        // Double stroke = chisel marker
+        for (let pass = 0; pass < 2; pass++) {
+            wallBuf.stroke(col[0], col[1], col[2], pass === 0 ? 110 : 60);
+            wallBuf.strokeWeight(pass === 0 ? 3.5 : 2);
+            wallBuf.beginShape();
+            for (let i = 0; i <= 14; i++) {
+                let px = sx + (i / 14) * span + pass * 2;
+                let py = sy + (noise(seed + i * 0.35) - 0.5) * span * 0.7 + pass * 2;
+                wallBuf.curveVertex(px, py);
+            }
+            wallBuf.endShape();
+        }
+    }
+
+    // --- Faint spray clouds: buffed-out old pieces ---
+    let cloudN = isMobile ? 2 : 4;
+    for (let c = 0; c < cloudN; c++) {
+        let col = GRAFFITI_PALETTE[floor(random(GRAFFITI_PALETTE.length))];
+        let cx2 = random(width);
+        let cy2 = random(height);
+        let spread = random(20, 55);
+        wallBuf.noStroke();
+        let dots = isMobile ? 80 : 160;
+        for (let i = 0; i < dots; i++) {
+            wallBuf.fill(col[0], col[1], col[2], random(4, 18));
+            wallBuf.ellipse(cx2 + randomGaussian(0, spread), cy2 + randomGaussian(0, spread * 0.6), random(1, 3));
+        }
     }
 
     wallBuf.noStroke();
@@ -297,244 +390,166 @@ function drawTripState() {
     }
 }
 
+// One reality, four layers deep. Every hit tears further down into the SAME
+// place: layer 1 is a violet dream, layer 4 is the bottom. Aggression scales.
 function drawTripWorld() {
-    if (tripWorld === 0) {
-        drawTripPain();
-    } else if (tripWorld === 1) {
-        drawTripTimefall();
-    } else {
-        drawTripAcid();
-    }
-}
+    let agg = (tripDepth - 1) / (MAX_DEPTH - 1); // 0..1
 
-// --- World 0: pain ---
-function drawTripPain() {
-    // Lub-dub double pulse: sharp systole, softer diastole, then silence
-    let beat = pow(max(0, sin(hbPhase)), 6) + 0.55 * pow(max(0, sin(hbPhase - 0.7)), 6);
-    if (beat > 0.8 && shakeFrames < 3) {
-        shakeFrames = 6;
-        shakeDecay = 4;
-    }
-
-    // Background breathes red with the beat
-    background(10 + beat * 28, 2, 4);
-
-    // The whole world swells on each beat
-    push();
-    translate(width / 2, height / 2);
-    scale(1 + beat * 0.05);
-    translate(-width / 2, -height / 2);
-
-    // Concentric flesh rings: translucent fill + glowing edge, heavy deformation
-    let ringCount = isMobile ? 7 : 11;
+    // Trail accumulation: deeper = longer, dirtier trails
+    noStroke();
     colorMode(RGB);
-    for (let i = ringCount - 1; i >= 0; i--) {
-        let baseR = map(i, 0, ringCount, 30, max(width, height) * 0.72);
-        let r = baseR * (1 + beat * 0.06);
-        let alpha = map(i, 0, ringCount, 220, 50);
-        let redC = floor(map(i, 0, ringCount, 235, 70));
-        fill(redC * 0.35, 4, 8, 26);
-        stroke(redC, 14, 20, alpha);
-        strokeWeight(map(i, 0, ringCount, 4, 1.2));
+    fill(0, 0, 0, 16 - agg * 9);
+    rect(-20, -20, width + 40, height + 40);
+
+    // Palette descent: violet dream -> neon -> blood
+    let baseHue = lerp(265, 360, agg) % 360;
+
+    // Heartbeat accelerates as you sink
+    let bpmPhase = hbPhase * (1 + agg * 1.7);
+    let beat = pow(max(0, sin(bpmPhase)), 6) + 0.55 * pow(max(0, sin(bpmPhase - 0.7)), 6);
+    if (agg > 0.2 && beat > 0.8 && shakeFrames < 3) {
+        shakeFrames = floor(4 + agg * 7);
+        shakeDecay = 2 + agg * 7;
+    }
+
+    let cx = width / 2;
+    let cy = height / 2;
+
+    push();
+    translate(cx, cy);
+    scale(1 + beat * (0.015 + agg * 0.06));
+    translate(-cx, -cy);
+
+    colorMode(HSB, 360, 100, 100, 100);
+
+    // 1) The tunnel — spine of this reality, present at every depth.
+    //    Rings expand toward the viewer: you are falling in.
+    let rings = isMobile ? 7 : 11;
+    let fall = (t * (0.5 + agg * 2.0)) % 1;
+    noFill();
+    for (let i = 0; i < rings; i++) {
+        let prog = ((i / rings) + fall) % 1;
+        let r = pow(prog, 1.7) * max(width, height) * 0.75;
+        if (r < 4) continue;
+        // Analogous hues only — tonal, hazy, restrained
+        let ringHue = (baseHue + i * 2.5 + t * 8 * agg) % 360;
+        let alpha = map(prog, 0, 1, 6, 55);
+        stroke(ringHue, 28 + agg * 22, map(prog, 0, 1, 30, 88), alpha);
+        strokeWeight(map(prog, 0, 1, 0.6, 2.5 + agg * 2));
         beginShape();
-        let steps = 60;
+        let steps = 50;
+        let deform = 0.06 + agg * 0.24;
         for (let j = 0; j <= steps; j++) {
             let ang = (j / steps) * TWO_PI;
-            let nVal = noise(cos(ang) * 0.9 + 2 + i * 1.7, sin(ang) * 0.9 + 2 + i * 1.7, t * 0.7);
-            let nr = r + map(nVal, 0, 1, -r * 0.26, r * 0.26);
-            vertex(width / 2 + cos(ang) * nr, height / 2 + sin(ang) * nr);
+            let nVal = noise(cos(ang) * 0.8 + 2 + i * 1.3, sin(ang) * 0.8 + 2 + i * 1.3, t * (0.4 + agg * 0.6));
+            let nr = r * (1 + map(nVal, 0, 1, -deform, deform));
+            vertex(cx + cos(ang) * nr, cy + sin(ang) * nr);
         }
         endShape(CLOSE);
     }
 
-    // Radial veins: jagged flickering lines crawling outward
-    let veinCount = isMobile ? 7 : 12;
-    noFill();
-    for (let v = 0; v < veinCount; v++) {
-        let ang0 = (v / veinCount) * TWO_PI + noise(v * 7.3, t * 0.2) * 0.8;
-        let flicker = noise(v * 3.1, t * 1.5);
-        if (flicker < 0.35) continue;
-        stroke(190 + beat * 60, 18, 22, 50 + flicker * 90);
-        strokeWeight(0.8 + flicker * 1.4);
-        beginShape();
-        let segs = 18;
-        for (let s2 = 0; s2 <= segs; s2++) {
-            let rr = map(s2, 0, segs, 10, max(width, height) * 0.6);
-            let wob = (noise(v * 11.7, s2 * 0.35, t * 0.6) - 0.5) * rr * 0.35;
-            let ang = ang0 + wob / rr;
-            vertex(width / 2 + cos(ang) * rr, height / 2 + sin(ang) * rr);
+    // 2) Kaleidoscope arms join from layer 2
+    if (tripDepth >= 2) {
+        let segments = 3 + tripDepth;
+        let spin = t * (0.3 + agg * 0.6);
+        for (let seg = 0; seg < segments; seg++) {
+            let baseAngle = (seg / segments) * TWO_PI + spin;
+            // Analogous cluster around the base hue; one arm carries the
+            // single complementary accent — restraint over rainbow
+            let isAccent = seg === 0;
+            let armHue = isAccent
+                ? (baseHue + 160) % 360
+                : (baseHue + 15 + seg * 9) % 360;
+            for (let pass = 0; pass < 2; pass++) {
+                stroke(armHue, isAccent ? 60 : 38 + agg * 18, 92, pass === 0 ? 12 : 42 + agg * 18);
+                strokeWeight(pass === 0 ? 4 + agg * 3 : 1.5);
+                beginShape();
+                let steps = 35;
+                for (let i = 0; i < steps; i++) {
+                    let r = map(i, 0, steps, 10, min(width, height) * 0.48);
+                    let nAngle = baseAngle + (noise(i * 0.1, seg * 1.3, t * (0.5 + agg * 0.5)) - 0.5) * (1.0 + agg * 0.8);
+                    vertex(cx + cos(nAngle) * r, cy + sin(nAngle) * r);
+                }
+                endShape();
+            }
         }
-        endShape();
     }
 
-    // Drifting smoke blobs occluding parts
+    // 3) Veins crack through from layer 3
+    if (tripDepth >= 3) {
+        let veinCount = isMobile ? 6 : 10;
+        for (let v = 0; v < veinCount; v++) {
+            let ang0 = (v / veinCount) * TWO_PI + noise(v * 7.3, t * 0.2) * 0.8;
+            let flicker = noise(v * 3.1, t * 1.8);
+            if (flicker < 0.4) continue;
+            stroke((baseHue + 10) % 360, 62, 70 + beat * 25, 30 + flicker * 60);
+            strokeWeight(0.8 + flicker * 1.6);
+            beginShape();
+            let segs = 16;
+            for (let s2 = 0; s2 <= segs; s2++) {
+                let rr = map(s2, 0, segs, 10, max(width, height) * 0.6);
+                let wob = (noise(v * 11.7, s2 * 0.35, t * 0.7) - 0.5) * rr * 0.4;
+                let ang = ang0 + wob / rr;
+                vertex(cx + cos(ang) * rr, cy + sin(ang) * rr);
+            }
+            endShape();
+        }
+    }
+
+    // Smoke occlusion — the reality has body
     noStroke();
+    colorMode(RGB);
     for (let b of smokeBlobs) {
         b.x += b.vx + (noise(b.seed, t * 0.3) - 0.5) * 0.8;
-        b.y += b.vy;
+        b.y += b.vy * (1 + agg);
         if (b.y < -b.size) b.y = height + b.size;
         if (b.x < -b.size) b.x = width + b.size;
         if (b.x > width + b.size) b.x = -b.size;
-        fill(0, 0, 0, 70);
+        fill(0, 0, 0, 50 + agg * 30);
         ellipse(b.x, b.y, b.size, b.size * 0.7);
     }
 
     pop();
 
-    // Pulsing blood vignette at the edges
+    // 4) Glitch slices tear the image from layer 3
+    if (tripDepth >= 3 && random(1) < 0.15 + agg * 0.35) {
+        let sliceCount = floor(random(1, 3 + agg * 3));
+        for (let i = 0; i < sliceCount; i++) {
+            let sy = random(height);
+            let sh = random(3, 18);
+            let off = random(-30, 30) * (0.5 + agg);
+            copy(0, floor(sy), width, floor(sh), floor(off), floor(sy), width, floor(sh));
+        }
+    }
+
+    // 5) The bottom: inverted flashes and grain storms
+    if (tripDepth >= MAX_DEPTH) {
+        if (random(1) < 0.035) {
+            blendMode(DIFFERENCE);
+            noStroke();
+            fill(255);
+            rect(0, 0, width, height);
+            blendMode(BLEND);
+        }
+        let grain = isMobile ? 200 : 550;
+        strokeWeight(1.4);
+        for (let i = 0; i < grain; i++) {
+            let gb = random(100, 220);
+            stroke(gb, gb * 0.35, gb * 0.35, random(20, 60));
+            point(random(width), random(height));
+        }
+    }
+
+    // Pulsing vignette, bleeding more color the deeper you are
     noStroke();
     let vg = drawingContext.createRadialGradient(
-        width / 2, height / 2, min(width, height) * 0.25,
-        width / 2, height / 2, max(width, height) * 0.72
+        cx, cy, min(width, height) * 0.25,
+        cx, cy, max(width, height) * 0.72
     );
     vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, `rgba(${floor(70 + beat * 110)},0,8,0.5)`);
+    vg.addColorStop(1, `rgba(${floor(40 + agg * 140 + beat * 60)},0,${floor(30 - agg * 25)},${0.35 + agg * 0.25})`);
     drawingContext.fillStyle = vg;
     drawingContext.fillRect(0, 0, width, height);
-
-    colorMode(RGB);
-}
-
-// --- World 1: timefall ---
-function drawTripTimefall() {
-    // Heavy film grain background
-    let bri = random(8, 18);
-    background(bri, bri * 0.95, bri * 0.85);
-
-    // Brightness flicker
-    if (random(1) < 0.06) {
-        let fl = random(200, 255);
-        background(fl, fl * 0.97, fl * 0.93);
-    }
-
-    // Occasional full invert frame
-    if (random(1) < 0.004) {
-        drawingContext.filter = 'invert(100%)';
-    } else {
-        drawingContext.filter = 'none';
-    }
-
-    // Hand-cranked projector wobble: the whole tunnel jitters frame to frame
-    let crankX = random(-2.5, 2.5);
-    let crankY = random(-2.5, 2.5);
-    // Occasional frame jump (film slipping in the gate)
-    if (random(1) < 0.02) crankY += random(-30, 30);
-
-    // Receding concentric rectangles — sepia tunnel, falling inward
-    let levels = isMobile ? 10 : 18;
-    let fall = (t * 3) % 1; // continuous zoom: rings fall toward the viewer
-    noFill();
-    for (let i = levels; i >= 1; i--) {
-        let prog = ((i + fall) / levels);
-        if (prog > 1) continue;
-        let rw = width * prog;
-        let rh = height * prog;
-        let rot = t * 0.03 * prog + sin(t * 0.5) * 0.02;
-        let sepiaR = floor(map(prog, 0, 1, 235, 70));
-        let sepiaG = floor(map(prog, 0, 1, 185, 48));
-        let sepiaB = floor(map(prog, 0, 1, 115, 24));
-        stroke(sepiaR, sepiaG, sepiaB, map(prog, 0, 1, 230, 50));
-        strokeWeight(map(prog, 0, 1, 3.5, 0.6));
-        push();
-        translate(width / 2 + crankX, height / 2 + crankY);
-        rotate(rot);
-        rect(-rw / 2, -rh / 2, rw, rh);
-        pop();
-    }
-
-    // Film grain — coarse and visible
-    let grainCount = isMobile ? 500 : 1400;
-    strokeWeight(1.6);
-    for (let i = 0; i < grainCount; i++) {
-        let gx = random(width);
-        let gy = random(height);
-        let gb = random(100, 235);
-        stroke(gb, gb * 0.9, gb * 0.72, random(40, 110));
-        point(gx, gy);
-    }
-
-    // Dark corner vignette (old lens)
-    noStroke();
-    let vg2 = drawingContext.createRadialGradient(
-        width / 2, height / 2, min(width, height) * 0.3,
-        width / 2, height / 2, max(width, height) * 0.7
-    );
-    vg2.addColorStop(0, 'rgba(0,0,0,0)');
-    vg2.addColorStop(1, 'rgba(8,5,2,0.75)');
-    drawingContext.fillStyle = vg2;
-    drawingContext.fillRect(0, 0, width, height);
-
-    // Film scratch lines that persist a few frames
-    if (random(1) < 0.08) {
-        filmScratch.push({
-            x: random(width),
-            alpha: random(100, 200),
-            life: floor(random(3, 8))
-        });
-    }
-    for (let i = filmScratch.length - 1; i >= 0; i--) {
-        let fs = filmScratch[i];
-        stroke(220, 210, 180, fs.alpha);
-        strokeWeight(random(0.5, 1.5));
-        line(fs.x, 0, fs.x + random(-3, 3), height);
-        fs.life--;
-        if (fs.life <= 0) filmScratch.splice(i, 1);
-    }
-
-    drawingContext.filter = 'none';
-    colorMode(RGB);
-}
-
-// --- World 2: acid ---
-function drawTripAcid() {
-    // Melt feedback: don't clear, overlay translucent black
-    noStroke();
-    fill(0, 0, 0, 7);
-    rect(0, 0, width, height);
-
-    acidHue = (acidHue + 0.4) % 360;
-
-    // 6-segment rotational symmetry of noise-driven trails
-    let trails = isMobile ? 3 : 6;
-    let segments = 6;
-    let cx = width / 2;
-    let cy = height / 2;
-    noFill();
-    colorMode(HSB, 360, 100, 100, 100);
-
-    // Global slow rotation + radial breathing keep the kaleidoscope alive
-    let spin = t * 0.45;
-    let breathe = 1 + 0.18 * sin(t * 1.3);
-
-    for (let seg = 0; seg < segments; seg++) {
-        let baseAngle = (seg / segments) * TWO_PI + spin;
-        let trailHue = (acidHue + seg * 60) % 360;
-        // Two passes per arm: wide glow + bright core
-        for (let pass = 0; pass < 2; pass++) {
-            stroke(trailHue, 90, 95, pass === 0 ? 25 : 75);
-            strokeWeight(pass === 0 ? 5 : 1.8);
-            beginShape();
-            let steps = 40;
-            for (let i = 0; i < steps; i++) {
-                let r = map(i, 0, steps, 10, min(width, height) * 0.48) * breathe;
-                let nAngle = baseAngle + (noise(i * 0.1, seg * 1.3, t * 0.6) - 0.5) * 1.2;
-                vertex(cx + cos(nAngle) * r, cy + sin(nAngle) * r);
-            }
-            endShape();
-        }
-        // Mirrored counter-rotating ghost arm (interference)
-        let ghostHue = (trailHue + 180) % 360;
-        stroke(ghostHue, 80, 90, 35);
-        strokeWeight(1.2);
-        beginShape();
-        let steps2 = 30;
-        for (let i = 0; i < steps2; i++) {
-            let r = map(i, 0, steps2, 10, min(width, height) * 0.42) * (2 - breathe);
-            let nAngle = -baseAngle - spin * 2 + (noise(i * 0.12, seg * 2.1 + 50, t * 0.5) - 0.5) * 1.4;
-            vertex(cx + cos(nAngle) * r, cy + sin(nAngle) * r);
-        }
-        endShape();
-    }
 
     colorMode(RGB);
 }
@@ -598,6 +613,7 @@ function drawReformState() {
     if (reformTimer >= REFORM_DURATION) {
         state = 'wall';
         tripTimer = 0;
+        tripDepth = 1; // however deep you went, you always come back
     }
 }
 
@@ -780,12 +796,13 @@ function handleHit(cx, cy) {
         shakeFrames = 40;
         shakeDecay = 12;
         tripTimer = 0;
-        // Trip world cycles on each new hit
-        tripWorld = (tripWorld + 1) % 3;
-    } else if (state === 'trip') {
-        // Hit during TRIP: jump to next world, reset timer
-        tripWorld = (tripWorld + 1) % 3;
+        tripDepth = 1; // every fall starts at the surface of the other side
+    } else if (state === 'trip' || state === 'shatter') {
+        // Hit while falling: tear one layer deeper into the same reality
+        if (tripDepth < MAX_DEPTH) tripDepth++;
         tripTimer = 0;
-        acidHue = random(360);
+        flashFrames = 4;
+        shakeFrames = 20 + tripDepth * 6;
+        shakeDecay = 5 + tripDepth * 2;
     }
 }
