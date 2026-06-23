@@ -673,6 +673,33 @@ canvas {
 }
 
 /* ===========================================================================
+   MOBILE reading pages (<=600px) — use the width, tighten the rhythm.
+   Collapses the desktop-scale double-padding so cards run near full-width
+   (text ~311px vs ~236px before) and the vertical rhythm is compact, cutting
+   wasted space and scroll. Desktop is untouched (separate breakpoint).
+   =========================================================================== */
+@media (max-width: 600px) {
+  .page {
+    padding: var(--space-2) var(--space-2) var(--space-3);
+  }
+  .running-mark {
+    margin: 0 calc(-1 * var(--space-2)) var(--space-2);
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+  }
+  .reading-column {
+    padding: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+  .work {
+    margin-bottom: var(--space-2);
+  }
+  .page-title {
+    margin-bottom: var(--space-2);
+  }
+}
+
+/* ===========================================================================
    MOTION
    =========================================================================== */
 @keyframes fadeIn {
