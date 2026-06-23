@@ -161,16 +161,119 @@ canvas {
   text-shadow: 0 20px 30px rgba(0, 0, 0, 0.5);
 }
 
+/* .role — PRODUCT ENGINEER — Liquid Glass chip.
+   Base rule = the no-backdrop-filter fallback (dense smoked-dark, readable
+   everywhere). @supports upgrades it to real frosted glass; desktop Chromium
+   additionally gets true SVG refraction (#liquid). Pure CSS + one inline SVG. */
 .role {
   display: inline-block;
   width: fit-content;
+  position: relative;            /* anchor the ::before sheen */
+  z-index: 0;                    /* stacking context for the sheen */
+  isolation: isolate;            /* contain the screen-blend context */
+  overflow: hidden;              /* clip the sheen to the pane */
+
   font-size: var(--step-role);
   text-transform: uppercase;
   letter-spacing: var(--track-role);
   font-weight: 400;
-  padding: 5px;
-  background-color: var(--plate);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 5px 9px;
+  border-radius: 7px;
+
+  color: var(--ink);
+  /* tight dark halo — keeps white strokes crisp over the brightest sketch */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 1px rgba(0, 0, 0, 0.7);
+
+  /* fallback body (no blur): dense floor so it never goes transparent */
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(0, 0, 0, 0.62) 38%,
+    rgba(0, 0, 0, 0.78) 100%
+  );
+
+  /* edge-light + lift: bright top rim, dark underside, soft drop shadow */
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+
+  transform: translateZ(0);      /* own GPU layer for the backdrop sample */
+}
+
+/* faint static specular sheen — quiet, no animation (reduced-motion safe) */
+.role::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.14) 35%,
+    transparent 62%
+  );
+  mix-blend-mode: screen;
+  z-index: 1;
+}
+
+/* real glass: only where backdrop-filter exists. Thins the body so the live
+   sketch refracts through; brightness(.82) caps backdrop luminance BEFORE the
+   white text composites — the load-bearing legibility safeguard. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .role {
+    -webkit-backdrop-filter: blur(14px) saturate(160%) brightness(0.82);
+    backdrop-filter: blur(14px) saturate(160%) brightness(0.82);
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(0, 0, 0, 0.22) 45%,
+      rgba(0, 0, 0, 0.34) 100%
+    );
+  }
+}
+
+/* mobile: smaller blur radius = fewer sampled texels per frame = less battery */
+@media (max-width: 600px) {
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .role {
+      -webkit-backdrop-filter: blur(10px) saturate(150%) brightness(0.82);
+      backdrop-filter: blur(10px) saturate(150%) brightness(0.82);
+    }
+  }
+}
+
+/* desktop refraction upgrade — Chromium-strong, perf-gated. The quoted url()
+   test reads false in Safari/Firefox, so they keep the pure frost untouched. */
+@supports (backdrop-filter: url('#liquid')) {
+  @media (min-width: 880px) {
+    .role {
+      backdrop-filter: url('#liquid') blur(2px) saturate(160%) brightness(0.82);
+    }
+  }
+}
+
+/* reduced motion: nothing animates, but neutralise the screen blend so the
+   sheen can never read as a glint over a frozen canvas. */
+@media (prefers-reduced-motion: reduce) {
+  .role::before { mix-blend-mode: normal; opacity: 0.6; }
+}
+
+/* print: collapse the glass to ink-on-paper. */
+@media print {
+  .role {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: #fff;
+    color: #000;
+    box-shadow: none;
+    text-shadow: none;
+    border: 0;
+    border-bottom: 2px solid #333;
+    border-radius: 0;
+  }
+  .role::before { display: none; }
 }
 
 /* The load-bearing duality line — a confession, not a slogan. Fades in
