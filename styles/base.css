@@ -1,0 +1,581 @@
+/* ===========================================================================
+   drumssand.me — shared identity system (zero-build)
+   One canvas, one type system, one voice across four pages.
+   Change a token here and the whole site shifts.
+   =========================================================================== */
+
+:root {
+  /* INK — the dark ground and the white text tiers (from the original card) */
+  --ground: #050505;
+  --ink: #ffffff;
+  --ink-strong: rgba(255, 255, 255, 0.85);
+  --ink-mid: rgba(255, 255, 255, 0.45);   /* whisper line, deks */
+  --ink-quiet: rgba(255, 255, 255, 0.28);  /* quiet nav links */
+  --ink-ghost: rgba(255, 255, 255, 0.22);  /* sketch credit captions */
+  --plate: #000000;                         /* black backing, proven on the card */
+  --plate-soft: rgba(0, 0, 0, 0.8);
+  --rule: rgba(255, 255, 255, 0.18);        /* editorial hairline */
+
+  /* TYPE — families already loaded per page from Google Fonts */
+  --font-display: 'Playfair Display', serif;     /* name, titles, pull-quotes — always italic */
+  --font-body: 'Inter', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Menlo', monospace; /* dates, filenames, cv facts */
+
+  --step-fragment: 0.7rem;
+  --step-meta: 0.75rem;
+  --step-body: 0.95rem;
+  --step-role: 0.9rem;
+  --step-name: 2.5rem;
+  --step-title: 1.6rem;
+  --track-role: 2px;
+  --track-eyebrow: 3px;
+
+  /* RHYTHM */
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 2rem;
+  --space-4: 4rem;
+  --gutter: 10vw;            /* echoes the card's margin-left across every page */
+  --reading-measure: 640px;
+  --lead: 1.6;
+
+  /* MOTION */
+  --ease-ink: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-settle: 1.2s;
+  --dur-fade: 1.5s;
+  --dur-micro: 0.3s;
+
+  /* THE DUALITY GRADIENT — one variable carries the artist -> engineer arc.
+     Each page overrides it via a body class below. */
+  --canvas-opacity: 1;
+}
+
+/* --- reset ------------------------------------------------------------------ */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: none;        /* Firefox — hide the scrollbar, keep scrolling */
+  -ms-overflow-style: none;     /* legacy Edge/IE */
+}
+html::-webkit-scrollbar {       /* WebKit / Blink */
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overscroll-behavior: none;
+}
+
+/* The live canvas: a fixed backdrop behind everything, dimmed per page. */
+canvas {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  opacity: var(--canvas-opacity);
+}
+
+/* --- page depth (canvas intensity + scroll behaviour) ----------------------- */
+.is-landing {
+  --canvas-opacity: 1;
+  height: 100vh;
+  overflow: hidden;
+  touch-action: none;          /* the card is a no-scroll statement */
+}
+.is-projects { --canvas-opacity: 0.22; }
+.is-writing  { --canvas-opacity: 0.08; }
+.is-cv       { --canvas-opacity: 0.12; }
+
+/* ===========================================================================
+   LANDING — the card / overture (no scroll, full art intensity)
+   =========================================================================== */
+.layout {
+  position: absolute;
+  inset: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  pointer-events: none;        /* let the canvas breathe; the card re-enables */
+}
+
+.profile-card {
+  margin-left: var(--gutter);
+  pointer-events: auto;
+  max-width: 300px;
+  opacity: 0;
+  animation: fadeIn var(--dur-fade) var(--ease-ink) forwards;
+}
+
+.profile-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: transform var(--dur-micro) ease;
+  pointer-events: none;
+}
+.profile-img:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.tag {
+  display: block;
+  width: fit-content;
+  font-size: var(--step-meta);
+  color: var(--ink-strong);
+  letter-spacing: 1px;
+  font-weight: 300;
+  margin-bottom: 0.2rem;
+  background-color: var(--plate);
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: var(--step-name);
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1.1;
+  margin: 0 0 0.5rem 0;
+  padding: 5px;
+  width: fit-content;
+  background-color: var(--plate);
+  text-shadow: 0 20px 30px rgba(0, 0, 0, 0.5);
+}
+
+.role {
+  display: inline-block;
+  width: fit-content;
+  font-size: var(--step-role);
+  text-transform: uppercase;
+  letter-spacing: var(--track-role);
+  font-weight: 400;
+  padding: 5px;
+  background-color: var(--plate);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* The load-bearing duality line — a confession, not a slogan. Fades in
+   AFTER the role so the eye reads name -> role -> confession. */
+.whisper {
+  display: block;
+  width: fit-content;
+  margin-top: 0.4rem;
+  font-size: var(--step-fragment);
+  font-weight: 300;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+  color: var(--ink-mid);
+  background-color: var(--plate-soft);
+  padding: 3px 7px;
+  border-radius: 4px;
+  opacity: 0;
+  animation: fadeIn 0.9s var(--ease-ink) 0.6s forwards;
+}
+
+/* One manifesto line, distilled from the README, in Oscar's own voice. */
+.manifesto {
+  display: block;
+  width: fit-content;
+  margin-top: 0.9rem;
+  font-size: var(--step-fragment);
+  font-weight: 300;
+  line-height: 1.4;
+  color: var(--ink-mid);
+  background-color: var(--plate-soft);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.socials {
+  display: flex;
+  gap: 20px;
+  width: fit-content;
+  margin-top: 1.4rem;
+  background-color: var(--plate-soft);
+  padding: 5px 10px;
+  border-radius: 10px;
+}
+.social-link {
+  display: block;
+  text-decoration: none;
+  color: var(--ink-strong);
+  transition: color var(--dur-micro) ease, transform var(--dur-micro) ease;
+}
+.social-link svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+.social-link:hover,
+.social-link:focus-visible {
+  color: var(--ink);
+  transform: translateY(-3px);
+  outline: none;
+}
+
+/* Named work: credits the running sketch as an authored generative piece. */
+.sketch-credit {
+  display: block;
+  width: fit-content;
+  margin-top: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.5px;
+  color: var(--ink-ghost);
+  background-color: var(--plate-soft);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.sketch-credit::before {
+  content: '◆ ';
+  opacity: 0.6;
+}
+
+/* the explore nav — meant to be SEEN: legible over any sketch (own plate),
+   bright, with a persistent hairline underline that reads as "these are links"
+   even on touch (no hover), brightening on hover/focus. */
+.quiet-links {
+  display: flex;
+  gap: 1.1rem;
+  margin-top: 1.1rem;
+  width: fit-content;
+  padding: 7px 13px;
+  background-color: var(--plate-soft);
+  border-radius: 8px;
+}
+.quiet-links a {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 400;
+  text-decoration: none;
+  letter-spacing: 1px;
+  text-transform: lowercase;
+  color: var(--ink-strong);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1px;
+  transition: color var(--dur-micro) ease, border-color var(--dur-micro) ease;
+}
+.quiet-links a:hover,
+.quiet-links a:focus-visible {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  outline: none;
+}
+
+/* Keep the no-scroll card breathing on small screens: lift it, shrink the
+   name, and drop the manifesto line first (the designated overflow valve). */
+@media (max-width: 600px) {
+  .profile-card {
+    margin-left: 8vw;
+    margin-bottom: 10vh;
+  }
+  .name { font-size: 2rem; }
+  .manifesto { display: none; }
+}
+
+/* ===========================================================================
+   INTERIOR PAGES — reading rooms (scroll, dimmed canvas, one editorial hand)
+   =========================================================================== */
+.page {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;          /* covers the viewport so the shield wraps all taps */
+  box-sizing: border-box;
+  padding: var(--space-4) var(--gutter) calc(var(--space-4) * 1.5);
+}
+
+/* running wordmark + back link — iOS large-title behaviour: looks like the
+   original (transparent, with breathing room) at rest, and grows a thin
+   frosted bar + hairline only once it pins to the top on scroll. The full-bleed
+   background breaks out of the page gutter; content stays aligned to the
+   reading column via the inner wrapper. */
+.running-mark {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 calc(-1 * var(--gutter)) var(--space-4);
+  padding: calc(var(--space-2) * 1.5) var(--gutter);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background var(--dur-micro) ease, border-color var(--dur-micro) ease;
+}
+.running-mark.is-stuck {
+  background: rgba(5, 5, 5, 0.62);
+  -webkit-backdrop-filter: saturate(120%) blur(14px);
+  backdrop-filter: saturate(120%) blur(14px);
+  border-bottom-color: var(--rule);
+}
+.running-mark-inner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  max-width: var(--reading-measure);
+  margin: 0 auto;
+  font-size: var(--step-body);
+}
+.running-mark .wordmark {
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  color: var(--ink-ghost);
+  text-decoration: none;
+}
+.running-mark .back-link {
+  font-family: var(--font-body);
+  text-transform: lowercase;
+  letter-spacing: 1px;
+  color: var(--ink-quiet);
+  text-decoration: none;
+  transition: color var(--dur-micro) ease;
+}
+.running-mark .back-link:hover,
+.running-mark .back-link:focus-visible {
+  color: var(--ink-strong);
+  outline: none;
+}
+
+/* the centred reading column, backed by a solid plate so bright sketches
+   never fight the text (mitigation over a global overlay). */
+.reading-column {
+  max-width: var(--reading-measure);
+  margin: 0 auto;
+  background-color: var(--plate);
+  padding: var(--space-3) var(--space-3) calc(var(--space-3) * 1.25);
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+}
+
+.page-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--step-fragment);
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  margin: 0 0 var(--space-2);
+}
+.page-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: var(--step-title);
+  line-height: 1.15;
+  margin: 0 0 var(--space-3);
+}
+
+/* selectable, readable body copy in the rooms */
+.reading-column p,
+.dek,
+.pullquote,
+.entry-title,
+.work-title {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.reading-column p {
+  font-size: var(--step-body);
+  line-height: var(--lead);
+  color: var(--ink-strong);
+  max-width: 60ch;
+}
+.reading-column a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--rule);
+  transition: text-decoration-color var(--dur-micro) ease;
+}
+.reading-column a:hover,
+.reading-column a:focus-visible {
+  text-decoration-color: var(--ink);
+  outline: none;
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: var(--space-3) 0;
+}
+
+.dek {
+  font-size: var(--step-meta);
+  color: var(--ink-mid);
+  line-height: 1.5;
+}
+
+.status {
+  font-family: var(--font-mono);
+  font-size: var(--step-fragment);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+}
+
+/* one Playfair-italic pull-quote per project/essay — the single editorial hand */
+.pullquote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.2rem;
+  line-height: 1.35;
+  color: var(--ink);
+  border-left: 2px solid var(--rule);
+  padding-left: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+/* --- /projects — narrative spreads ----------------------------------------- */
+.work {
+  margin-bottom: var(--space-4);
+}
+.work-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.4rem;
+  margin: 0 0 var(--space-1);
+}
+.work-meta {
+  font-family: var(--font-mono);
+  font-size: var(--step-fragment);
+  letter-spacing: 1px;
+  color: var(--ink-ghost);
+  margin-bottom: var(--space-2);
+}
+
+/* --- /writing — zine table of contents ------------------------------------- */
+.toc {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.toc li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.entry-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--ink);
+  text-decoration: none;
+  display: inline-block;
+}
+.entry-date {
+  font-family: var(--font-mono);
+  font-size: var(--step-fragment);
+  color: var(--ink-ghost);
+  letter-spacing: 1px;
+}
+
+/* --- /cv — the structured self --------------------------------------------- */
+.cv-section {
+  margin-bottom: var(--space-3);
+}
+.cv-section h2 {
+  font-family: var(--font-mono);
+  font-size: var(--step-fragment);
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  margin: 0 0 var(--space-2);
+}
+.cv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+.cv-mono {
+  font-family: var(--font-mono);
+  font-size: var(--step-meta);
+  color: var(--ink-strong);
+}
+
+/* ===========================================================================
+   DESKTOP COMPOSITION (min-width: 880px) — left-anchored editorial stack.
+   On wide screens the interior reading stack stops centering and seats against
+   the left gutter, echoing the landing card's margin-left:var(--gutter). The
+   right side is surrendered to the dim canvas as intentional negative space —
+   the void becomes the composition instead of a stranded box.
+   Scoped to >=880px, so the mobile (<=600px) and tablet (600-879px) centered
+   layouts are provably untouched.
+   =========================================================================== */
+@media (min-width: 880px) {
+  .reading-column {
+    margin-left: 0;
+    margin-right: auto;   /* anchor left at the gutter; canvas breathes on the right */
+  }
+  .running-mark-inner {
+    margin: 0;            /* header text left-anchors over the content column */
+  }
+}
+
+/* ===========================================================================
+   MOTION
+   =========================================================================== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Flash-free cross-document navigation. One rule, zero JS.
+   Unsupported browsers fall back to an instant plain navigation. */
+@view-transition {
+  navigation: auto;
+}
+
+/* Respect users who ask for less motion — neutralise every entrance/transition. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.001ms !important;
+  }
+  .profile-card,
+  .whisper { opacity: 1 !important; }
+  @view-transition { navigation: none; }
+}
+
+/* ===========================================================================
+   PRINT — /cv goes black-on-white with no canvas (the page recruiters screenshot)
+   =========================================================================== */
+@media print {
+  canvas { display: none !important; }
+  body { background: #fff; color: #000; }
+  .running-mark { display: none; }
+  .reading-column {
+    background: #fff;
+    border: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .page { padding: 0; }
+  .reading-column p,
+  .cv-mono,
+  .dek { color: #000; }
+  .page-title,
+  .work-title,
+  .entry-title { color: #000; }
+  .cv-section h2,
+  .page-eyebrow { color: #333; }
+}
