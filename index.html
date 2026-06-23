@@ -1,223 +1,94 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Oscar Sandoval | Creative Developer</title>
+    <title>Oscar Sandoval — Product Engineer</title>
+    <meta name="description" content="Oscar Sandoval — Product Engineer who builds like he paints. A hand-coded, zero-build presentation card with a living generative canvas; a new sketch every visit.">
+    <link rel="canonical" href="https://drumssand.me/">
+
+    <!-- Open Graph / social previews -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="drumssand.me">
+    <meta property="og:url" content="https://drumssand.me/">
+    <meta property="og:title" content="Oscar Sandoval — Product Engineer">
+    <meta property="og:description" content="Product Engineer who builds like he paints. A hand-coded, zero-build presentation card with a living generative canvas.">
+    <meta property="og:image" content="https://drumssand.me/assets/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Oscar Sandoval — Product Engineer">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Oscar Sandoval — Product Engineer">
+    <meta name="twitter:description" content="Product Engineer who builds like he paints. A hand-coded, zero-build site with a living generative canvas.">
+    <meta name="twitter:image" content="https://drumssand.me/assets/og.png">
+
+    <!-- icons -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <style>
-        * {
-            -webkit-user-select: none; 
-            -moz-user-select: none;    
-            -ms-user-select: none;     
-            user-select: none;             
-            -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #050505; 
-            color: #ffffff;
-            font-family: 'Inter', sans-serif;
-            overscroll-behavior: none;
-            touch-action: none;
-        }
-        canvas {
-            display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: -1;
-        }
-        .layout {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            align-items: center; 
-            justify-content: flex-start; 
-            pointer-events: none; 
-        }
-        .profile-card {
-            margin-left: 10vw; 
-            pointer-events: auto; 
-            max-width: 300px;
-            opacity: 0;
-            animation: fadeIn 1.5s ease-out forwards;
-        }
-        .profile-img {
-            width: 50px; 
-            height: 50px;
-            border-radius: 50%; 
-            object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.1); 
-            transition: transform 0.3s ease;
-            pointer-events: none;
-        }
-        .profile-img:hover {
-            transform: scale(1.1) rotate(5deg);
-        }
-        .tag {
-            display: block;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.8); 
-            letter-spacing: 1px;
-            margin-bottom: 0.2rem;
-            font-weight: 300;
-            background-color: rgba(0,0,0,1);
-            width: fit-content;
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-        .name {
-            font-family: 'Playfair Display', serif;
-            font-size: 2.5rem; 
-            font-weight: 700;
-            font-style: italic;
-            line-height: 1.1;
-            padding:  5px;
-            margin: 0 0 0.5rem 0;
-            background-color: rgba(0,0,0,1);
-            text-shadow: 0 20px 30px rgba(0,0,0,0.5); 
-        }
-        .role {
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: 400;
-            margin-bottom: 2rem;
-            display: inline-block;
-            border-bottom: 2px solid rgba(255,255,255,0.3);
-            padding-bottom: 5px;
-            padding: 5px;
-            background-color: rgba(0,0,0,1);
-            padding: 5px;
-        }
-        .socials {
-            display: flex;
-            gap: 20px; 
-            background-color: rgba(0,0,0,0.8);
-            padding: 5px 10px; 
-            width: fit-content;
-            border-radius: 10px;
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/base.css">
 
-        }
-        .social-link {
-            text-decoration: none;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 1.4rem;
-            transition: all 0.3s ease;
-        }
-        .social-link:hover {
-            color: #fff;
-            transform: translateY(-3px); 
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .quiet-links {
-            display: flex;
-            gap: 1.2rem;
-            margin-top: 0.75rem;
-            padding: 0 2px;
-        }
-        .quiet-links a {
-            font-family: 'Inter', sans-serif;
-            font-size: 0.75rem;
-            font-weight: 300;
-            text-decoration: none;
-            letter-spacing: 1px;
-            text-transform: lowercase;
-            color: rgba(255, 255, 255, 0.28);
-            transition: color 0.3s ease;
-        }
-        .quiet-links a:hover,
-        .quiet-links a:focus-visible {
-            color: rgba(255, 255, 255, 0.85);
-            outline: none;
-        }
-        @media (max-width: 600px) {
-            .profile-card {
-                margin-left: 8vw;
-                margin-bottom: 10vh;
-            }
-            .name {
-                font-size: 2rem;
-            }
-        }
-    </style>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Oscar Sandoval",
+      "alternateName": "drumssand",
+      "jobTitle": "Product Engineer",
+      "url": "https://drumssand.me",
+      "image": "https://drumssand.me/assets/og.png",
+      "email": "drumssand@gmail.com",
+      "sameAs": [
+        "https://mx.linkedin.com/in/drumssand",
+        "https://github.com/drumsSandoval",
+        "https://www.instagram.com/drumssand/"
+      ]
+    }
+    </script>
 </head>
-<body>
+<body class="is-landing">
     <div class="layout">
-        <div class="profile-card">
-            
-            <img id="profile-pic" src="" alt="Oscar Sandoval" class="profile-img">
+        <div class="profile-card" data-ui>
+
+            <img id="profile-pic" alt="Oscar Sandoval" class="profile-img" width="50" height="50" decoding="async">
 
             <span class="tag">@drumssand</span>
             <h1 class="name">Oscar Sandoval</h1>
-            <span class="role">Creative Developer</span>
+            <span class="role">Product Engineer</span>
+            <span class="whisper">who builds like he paints</span>
+
+            <span class="manifesto">my head is loud. i gave it a canvas.</span>
 
             <div class="socials">
-                <a href="https://mx.linkedin.com/in/drumssand" class="social-link" title="LinkedIn"><i class="ri-linkedin-fill"></i></a>
-                <a href="https://github.com/drumsSandoval" class="social-link" title="GitHub"><i class="ri-github-fill"></i></a>
-                <a href="https://www.instagram.com/drumssand/" class="social-link" title="Instagram"><i class="ri-instagram-line"></i></a>
-                <a href="mailto:drumssand@gmail.com" class="social-link" title="Email"><i class="ri-mail-send-line"></i></a>
+                <a href="https://mx.linkedin.com/in/drumssand" class="social-link" title="LinkedIn" aria-label="LinkedIn" rel="me noopener" target="_blank">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.47-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+                </a>
+                <a href="https://github.com/drumsSandoval" class="social-link" title="GitHub" aria-label="GitHub" rel="me noopener" target="_blank">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.26.8-.58v-2.03c-3.34.73-4.04-1.6-4.04-1.6-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.07 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.31-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.87.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.82.57A12 12 0 0 0 12 .3z"/></svg>
+                </a>
+                <a href="https://www.instagram.com/drumssand/" class="social-link" title="Instagram" aria-label="Instagram" rel="me noopener" target="_blank">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.43.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.43.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41a3.7 3.7 0 0 1-1.38-.9 3.7 3.7 0 0 1-.9-1.38c-.16-.43-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.43-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16zM12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.71-2.13 1.38C1.34 2.68.93 3.35.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.71 1.46 1.38 2.13.67.67 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56a5.9 5.9 0 0 0 2.13-1.38 5.9 5.9 0 0 0 1.38-2.13c.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91a5.9 5.9 0 0 0-1.38-2.13A5.9 5.9 0 0 0 19.86.63c-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0zm0 5.84a6.16 6.16 0 1 0 0 12.32 6.16 6.16 0 0 0 0-12.32zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.4-10.41a1.44 1.44 0 1 0 0 2.88 1.44 1.44 0 0 0 0-2.88z"/></svg>
+                </a>
+                <a href="mailto:drumssand@gmail.com" class="social-link" title="Email" aria-label="Email">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                </a>
             </div>
+
             <nav class="quiet-links">
-                <a href="/cv">cv</a>
-                <a href="/projects">projects</a>
-                <a href="/blog">blog</a>
+                <a href="/cv/">cv</a>
+                <a href="/writing/">writing</a>
             </nav>
+
+            <span class="sketch-credit" data-sketch-credit></span>
 
         </div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" defer></script>
-    <script>
-        // Profile image — runs immediately, no p5 dependency
-        const profileImages = [
-            'assets/profile.jpeg',
-            'assets/profile2.jpg'
-        ];
-        const randomImage = profileImages[Math.floor(Math.random() * profileImages.length)];
-        const imgElement = document.getElementById('profile-pic');
-        imgElement.onerror = function() {
-            this.style.display = 'none';
-        };
-        imgElement.src = randomImage;
 
-        // Inject sketch on window load (p5 deferred script has executed by then).
-        // p5's auto-init already ran without finding setup(), so start it
-        // manually once the sketch script finishes loading.
-        const sketches = [
-            'sketches/draw_flow.js',
-            'sketches/adhd_wave.js',
-            'sketches/hard_noise.js',
-            'sketches/paint.js',
-            'sketches/the_wall.js',
-            'sketches/garden.js',
-            'sketches/cloth.js',
-        ];
-        const randomSketch = sketches[Math.floor(Math.random() * sketches.length)];
-        window.addEventListener('load', function() {
-            const script = document.createElement('script');
-            script.src = randomSketch;
-            script.onload = function() {
-                if (typeof setup === 'function' && !window._p5Instance) {
-                    window._p5Instance = new p5();
-                }
-            };
-            document.body.appendChild(script);
-        });
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" defer></script>
+    <script src="/scripts/loader.js" defer></script>
 </body>
 </html>
