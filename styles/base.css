@@ -154,8 +154,14 @@ canvas {
   margin-left: var(--gutter);
   pointer-events: auto;
   max-width: 300px;
-  opacity: 0;
-  animation: fadeIn var(--dur-fade) var(--ease-ink) forwards;
+  animation: riseIn var(--dur-fade) var(--ease-ink);
+}
+/* The card paints immediately (opacity 1); the entrance is a transform-only
+   slide, so content is never hidden behind a paused animation — FCP-safe even
+   when the tab is backgrounded/throttled (avoids Lighthouse NO_FCP). */
+@keyframes riseIn {
+  from { transform: translateY(14px); }
+  to   { transform: translateY(0); }
 }
 
 .profile-img {
